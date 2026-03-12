@@ -1,29 +1,40 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
 
+
+
 class ProductModel
 {
 
+    //global connection use by constructer
+
+    private $conn;
+    public function __construct($conn)
+    {
+        $this->conn = $conn;
+    }
+   
     // select all data for view
 
-  public function getAllProducts()
-{
-    global $conn;
+    public function getAllProducts()
+    {
+        $data = mysqli_query($this->conn, "
+        SELECT p.*, b.br_name FROM db_product p LEFT JOIN brand b ON p.brand_id = b.id ");
+        return $data;
+    }
 
-    $data = mysqli_query($conn, "
-        SELECT p.*, b.br_name 
-        FROM db_product p
-        LEFT JOIN brand b ON p.brand_id = b.id
-    ");
-
-    return $data;
-}
+    public function countProducts()
+    {
+        $res = mysqli_query($this->conn, "SELECT COUNT(*) as total FROM db_product");
+        $row = mysqli_fetch_assoc($res);
+        return $row['total'];
+    }
+    
     //get single data when edit form use
 
     public function getProductById($id)
     {
-        global $conn;
-        $res = mysqli_query($conn, "SELECT * FROM db_product WHERE id='$id'");
+        $res = mysqli_query($this->conn, "SELECT * FROM db_product WHERE id='$id'");
         return mysqli_fetch_assoc($res);
     }
 
@@ -31,7 +42,6 @@ class ProductModel
 
     public function insertProduct($post, $files)
     {
-        global $conn;
 
         $product_name = $post['product_name'];
         $price = $post['price'];
@@ -42,10 +52,10 @@ class ProductModel
 
         //insert data first 
         $sql = "INSERT INTO db_product(product_name,price,description,status,brand_id) VALUES('$product_name','$price','$description','$status','$brand_id')";
-        mysqli_query($conn, $sql);
+        mysqli_query($this->conn, $sql);
 
         //get id
-        $id = mysqli_insert_id($conn);
+        $id = mysqli_insert_id($this->conn);
 
 
         //image code
@@ -60,7 +70,7 @@ class ProductModel
 
             move_uploaded_file($tmp, __DIR__ . "/../../public/uploads/" . $new_image);
 
-            mysqli_query($conn, "UPDATE db_product SET product_image='$new_image' WHERE id='$id'");
+            mysqli_query($this->conn, "UPDATE db_product SET product_image='$new_image' WHERE id='$id'");
         }
 
         return true;
@@ -71,15 +81,12 @@ class ProductModel
     //update query
     public function updateProduct($post, $files)
     {
-
-        global $conn;
-
         $id = $post['id'];
         $product_name = $post['product_name'];
         $price = $post['price'];
         $description = $post['description'];
         $status = $post['status'];
-        $brand_id=$post['brand_id'];
+        $brand_id = $post['brand_id'];
         $old_image = $post['old_image'];
 
         $update_fields = [];
@@ -98,8 +105,8 @@ class ProductModel
             $update_fields[] = "status='$status'";
         }
         if ($brand_id != '') {
-    $update_fields[] = "brand_id='$brand_id'";
-}
+            $update_fields[] = "brand_id='$brand_id'";
+        }
 
         //image update start
         if (!empty($files['product_image']['name'])) {
@@ -134,7 +141,7 @@ class ProductModel
         //final update query
         if (!empty($update_fields)) {
             $sql = "UPDATE db_product SET " . implode(", ", $update_fields) . " WHERE id='$id'";
-            mysqli_query($conn, $sql);
+            mysqli_query($this->conn, $sql);
         }
 
         return true;
@@ -142,10 +149,8 @@ class ProductModel
     //Delete query
     public function deleteProduct($id)
     {
-        global $conn;
-
         //get image name and delet in the database
-        $res = mysqli_query($conn, "SELECT product_image FROM db_product WHERE id='$id'");
+        $res = mysqli_query($this->conn, "SELECT product_image FROM db_product WHERE id='$id'");
         $data = mysqli_fetch_assoc($res);
 
 
@@ -158,7 +163,7 @@ class ProductModel
             }
         }
         //delete row
-        mysqli_query($conn, "DELETE FROM db_product WHERE id='$id'");
+        mysqli_query($this->conn, "DELETE FROM db_product WHERE id='$id'");
         return true;
     }
 
